@@ -7,6 +7,7 @@
     <title>Sorteo Pasanacu 2026</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -329,6 +330,11 @@
             text-align: center;
         }
 
+        .right-panel.full .item-number {
+            font-size: 1.2rem;
+            min-width: 30px;
+        }
+
         .list-item.fixed .item-number {
             color: var(--text-muted);
         }
@@ -349,6 +355,10 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        
+        .right-panel.full .item-name {
+            font-size: 0.95rem;
+        }
 
         .item-info-row {
             display: flex;
@@ -363,6 +373,10 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
+        
+        .right-panel.full .item-tag {
+            font-size: 0.65rem;
+        }
 
         .item-date {
             font-size: 0.8rem;
@@ -372,12 +386,23 @@
             gap: 4px;
         }
         
+        .right-panel.full .item-date {
+            font-size: 0.7rem;
+        }
+
         .list-item.fixed .item-tag {
             color: var(--danger);
         }
 
-        .actions { margin-top: auto; text-align: center; padding-top: 1rem;}
-        
+        .actions {
+            margin-top: auto;
+            text-align: center;
+            padding-top: 1rem;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
         @keyframes highlightWinner {
             0% {
                 transform: scale(1);
@@ -396,18 +421,106 @@
         }
 
         .btn-reset {
-            background: transparent; border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #ef4444; padding: 0.8rem 1.5rem; border-radius: 8px;
-            cursor: pointer; font-family: inherit; transition: 0.3s;
+            background: transparent;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: 0.3s;
             font-weight: bold;
         }
-        .btn-reset:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444; }
+
+        .btn-reset:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
+        }
+        
+        .btn-download {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--accent);
+            color: #34d399;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: 0.3s;
+            font-weight: bold;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-download:hover {
+            background: rgba(16, 185, 129, 0.2);
+            color: white;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+        }
 
         .empty-message {
             text-align: center;
             padding: 2rem;
             color: var(--text-muted);
             grid-column: 1 / -1;
+        }
+
+        /* --- Modal de Ganador --- */
+        .winner-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .winner-modal.show {
+            opacity: 1;
+        }
+
+        .winner-modal-content {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            padding: 3rem 4rem;
+            border-radius: 24px;
+            text-align: center;
+            transform: scale(0.8);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: white;
+        }
+
+        .winner-modal.show .winner-modal-content {
+            transform: scale(1);
+        }
+
+        .winner-modal-number {
+            font-size: 8rem;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+            margin: 1rem 0;
+            text-shadow: 0 0 40px rgba(99, 102, 241, 0.4);
+        }
+
+        .winner-modal h3 {
+            font-size: 2rem;
+            margin: 0;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .winner-modal p {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
         }
 
         /* --- CONTADOR REGRESIVO --- */
@@ -496,7 +609,7 @@
         <div class="right-panel">
             <div class="results-container">
                 <div class="results-header">
-                    <h2>Lista de Asignados</h2>
+                    <h2>Lista de Emprendedores</h2>
                     <div class="counters">
                         <span id="countTotal">Total: 16</span>
                         <span id="countDisp" class="disp">Libres: 8</span>
@@ -508,14 +621,52 @@
                 </div>
 
                 <div class="actions">
-                    <button class="btn-reset" onclick="reiniciarSorteo()">Reiniciar Sistema</button>
+                    <button class="btn-download" id="btnDownload" onclick="descargarImagen()">Descargar como Imagen</button>
+                    <button class="btn-reset" onclick="reiniciarSorteo()">Reiniciar</button>
                 </div>
             </div>
         </div>
 
     </div>
 
+    <!-- Modal de ganador principal -->
+    <div class="winner-modal" id="winnerModal">
+        <div class="winner-modal-content">
+            <h3 id="winnerModalName">NOMBRE</h3>
+            <div class="winner-modal-number" id="winnerModalNumber">#X</div>
+            <p>¡Posición sorteada con éxito!</p>
+            <button class="btn-reset" onclick="closeWinnerModal()"
+                style="color: #10b981; border-color: #10b981; width: 100%;">Continuar</button>
+        </div>
+    </div>
+
     <script>
+        function showWinnerModal(number, name) {
+            const modal = document.getElementById('winnerModal');
+            document.getElementById('winnerModalNumber').innerText = `#${number}`;
+            document.getElementById('winnerModalName').innerText = name;
+            modal.style.display = 'flex';
+            // Pequeño delay para que la transición de opacidad y escala ocurra de verdad
+            setTimeout(() => modal.classList.add('show'), 10);
+        }
+
+        function closeWinnerModal() {
+            const modal = document.getElementById('winnerModal');
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+
+                // Rehabilitar interfaz si aún hay disponibles
+                const numDisponibles = slots.filter(s => s.name === null).map(s => s.n);
+                const inputName = document.getElementById('playerName');
+                if (numDisponibles.length > 0) {
+                    inputName.disabled = false;
+                    document.getElementById('btnGenerar').disabled = false;
+                    inputName.focus();
+                }
+            }, 300);
+        }
+
         // --- 1. DATOS, PERSISTENCIA Y TIEMPO ---
         // Configuración de fecha límite: Domingo 15 de Marzo de 2026 a las 12:00:00 del mediodía
         const unlockDate = new Date("2026-03-12T11:30:00");
@@ -569,6 +720,20 @@
 
             // Actualizar contadores
             document.getElementById('countDisp').innerText = `Libres: ${numDisponibles.length}`;
+
+            // Control visual del layout cuando termina el sorteo
+            const leftPanel = document.querySelector('.left-panel');
+            const rightPanel = document.querySelector('.right-panel');
+
+            if (numDisponibles.length === 0) {
+                leftPanel.classList.add('hidden');
+                rightPanel.classList.add('full');
+                document.getElementById('btnDownload').style.display = 'inline-flex';
+            } else {
+                leftPanel.classList.remove('hidden');
+                rightPanel.classList.remove('full');
+                document.getElementById('btnDownload').style.display = 'none';
+            }
 
             // Verificamos si estamos bloqueados por el temporizador primero
             if (isLockedByTimer) {
@@ -686,13 +851,13 @@
         function obtenerFechaDeCobro(numero) {
             // El numero 1 empieza el "10 de Abril de 2026"
             // JS usa índices 0-11 para los meses, así que Abril = 3
-            let mesInicial = 3; 
+            let mesInicial = 3;
             let añoInicial = 2026;
             let diaFijo = 10;
-            
+
             // Calculamos cuántos meses agregar respecto al número 1
             // Ej: numero 1 suma 0 meses. Numero 2 suma 1 mes.
-            let mesesASumar = numero - 1; 
+            let mesesASumar = numero - 1;
 
             // Calculamos mes y año final
             let mesFinal = mesInicial + mesesASumar;
@@ -703,7 +868,7 @@
             // Formatear: DD/MM/YYYY
             let diaStr = diaFijo.toString().padStart(2, '0');
             let mesStr = (mesFinal + 1).toString().padStart(2, '0'); // +1 para volver al visual 1-12
-            
+
             return `${diaStr}/${mesStr}/${añoFinal}`;
         }
 
@@ -780,6 +945,22 @@
             const winnerIndex = Math.floor(Math.random() * numDisponibles.length);
             const winnerNumber = numDisponibles[winnerIndex];
 
+            // Si es la última persona, no giramos la ruleta por 5 segundos, le damos el premio de inmediato.
+            if (numDisponibles.length === 1) {
+                const slotIndex = slots.findIndex(s => s.n === winnerNumber);
+                slots[slotIndex].name = name;
+                saveData();
+
+                drawWheel();
+                renderList(winnerNumber);
+                actualizarDisponibles();
+
+                inputName.value = '';
+                lanzarConfeti();
+                showWinnerModal(winnerNumber, name);
+                return; // Cortamos la ejecución aquí
+            }
+
             // --- Cálculos matemáticos para el giro del CSS ---
             const arcSizeDegrees = 360 / numDisponibles.length;
             // Dónde queremos que se detenga el canvas.
@@ -830,13 +1011,12 @@
 
                 // Actualizar interfaz
                 renderList(winnerNumber);
+                actualizarDisponibles();
 
                 inputName.value = '';
-                if (numDisponibles.length > 0) {
-                    inputName.disabled = false;
-                    btnGenerar.disabled = false;
-                    inputName.focus();
-                }
+
+                // Lanza modal (y allí se rehabilitan los botones al cerrar)
+                showWinnerModal(winnerNumber, name);
 
             }, 5000); // 5 segundos, igual que el transition en CSS
         }
@@ -853,7 +1033,7 @@
         }
 
         function reiniciarSorteo() {
-            if(confirm('¿Seguro que quieres borrar la lista completamente y reiniciar?')) {
+            if (confirm('¿Seguro que quieres borrar la lista completamente y reiniciar?')) {
                 localStorage.removeItem('sorteo_ruleta_pasanacu2026');
                 canvas.style.transition = 'none';
                 canvas.style.transform = 'rotate(0deg)';
@@ -861,11 +1041,45 @@
                 setTimeout(() => {
                     canvas.style.transition = 'transform 5s cubic-bezier(0.2, 0.8, 0.1, 1)';
                 }, 50);
-                
+
                 loadData();
                 drawWheel();
                 renderList();
             }
+        }
+
+        function descargarImagen() {
+            const btn = document.getElementById('btnDownload');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Generando...';
+            btn.disabled = true;
+            
+            // Ocultar acciones temporalmente para la foto
+            const actionsDiv = document.querySelector('.actions');
+            actionsDiv.style.opacity = '0';
+            
+            const element = document.querySelector('.results-container');
+            
+            // Ajustar fondo para la foto para que no salga transparente
+            const originalBg = element.style.background;
+            element.style.background = '#0f172a';
+
+            html2canvas(element, {
+                scale: 2,
+                backgroundColor: '#0f172a'
+            }).then(canvas => {
+                // Restaurar
+                element.style.background = originalBg;
+                actionsDiv.style.opacity = '1';
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                
+                // Descargar
+                const link = document.createElement('a');
+                link.download = 'Resultados-Sorteo-Pasanacu.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
         }
 
         // --- ARRANQUE INICIAL ---
