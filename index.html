@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorteo Pasanacu 2026</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --accent: #10b981;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --fixed-bg: rgba(15, 23, 42, 0.8);
+            --highlight: #fbbf24;
+            --danger: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top right, #1e1b4b, var(--bg-color));
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            overflow-x: hidden;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-weight: 300;
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 1000px;
+            gap: 2rem;
+        }
+
+        @media (min-width: 900px) {
+            .main-container {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+
+            .left-panel {
+                flex: 1;
+                position: sticky;
+                top: 2rem;
+            }
+
+            .right-panel {
+                flex: 1;
+            }
+        }
+
+        /* --- CONTROLES Y RULETA (IZQUIERDA) --- */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        input {
+            width: 100%;
+            padding: 1rem 1.2rem;
+            font-size: 1rem;
+            font-family: inherit;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            color: var(--text-main);
+            outline: none;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        button.btn-primary {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            font-family: inherit;
+            background: linear-gradient(135deg, var(--primary), #6366f1);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button.btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+        }
+
+        button.btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button.btn-primary:disabled {
+            background: #475569;
+            box-shadow: none;
+            cursor: not-allowed;
+            opacity: 0.7;
+            transform: none;
+        }
+
+        /* RULETA CONTENEDOR */
+        .roulette-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: var(--card-bg);
+            border-radius: 50%;
+            border: 4px solid var(--card-border);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        /* FLECHA INDICADORA */
+        .pointer {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 35px solid var(--highlight);
+            z-index: 10;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+        }
+
+        .pointer::after {
+            content: '';
+            position: absolute;
+            top: -35px;
+            left: -10px;
+            width: 20px;
+            height: 20px;
+            background: var(--highlight);
+            border-radius: 50%;
+        }
+
+        /* RULETA CANVAS */
+        .roulette-container {
+            width: 95%;
+            height: 95%;
+            border-radius: 50%;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #wheelCanvas {
+            width: 100%;
+            height: 100%;
+            transform-origin: center;
+            transition: transform 5s cubic-bezier(0.2, 0.8, 0.1, 1);
+        }
+
+        /* CENTRO DE LA RULETA */
+        .center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20%;
+            height: 20%;
+            background: #1e293b;
+            border-radius: 50%;
+            border: 3px solid var(--primary);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .center-circle::after {
+            margin: auto;
+        }
+
+        /* --- LISTA DE ASIGNADOS (DERECHA) --- */
+        .results-container {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 1rem;
+        }
+
+        .results-header h2 {
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        .counters {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 1rem;
+        }
+
+        .counters span {
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .counters span.disp {
+            color: var(--highlight);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .list-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+
+        .list-item {
+            background: var(--fixed-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s;
+        }
+
+        .list-item.fixed {
+            opacity: 0.7;
+        }
+
+        .list-item.assigned {
+            background: rgba(30, 41, 59, 1);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .list-item.new-winner {
+            animation: highlightWinner 2s ease-out;
+            background: rgba(16, 185, 129, 0.1);
+            border-color: var(--accent);
+        }
+
+        .item-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .list-item.fixed .item-number {
+            color: var(--text-muted);
+        }
+
+        .list-item.new-winner .item-number {
+            color: var(--accent);
+        }
+
+        .item-details {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .item-name {
+            font-size: 1.1rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-info-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 4px;
+        }
+
+        .item-tag {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .item-date {
+            font-size: 0.8rem;
+            color: var(--highlight);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .list-item.fixed .item-tag {
+            color: var(--danger);
+        }
+
+        .actions { margin-top: auto; text-align: center; padding-top: 1rem;}
+        
+        @keyframes highlightWinner {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(16, 185, 129, 0);
+            }
+
+            20% {
+                transform: scale(1.05);
+                box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        .btn-reset {
+            background: transparent; border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444; padding: 0.8rem 1.5rem; border-radius: 8px;
+            cursor: pointer; font-family: inherit; transition: 0.3s;
+            font-weight: bold;
+        }
+        .btn-reset:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444; }
+
+        .empty-message {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            grid-column: 1 / -1;
+        }
+
+        /* --- CONTADOR REGRESIVO --- */
+        .countdown-container {
+            margin-top: 1rem;
+            display: inline-flex;
+            gap: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .count-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .count-box .val {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .count-box .lbl {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .countdown-message {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--highlight);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Sorteo Pasanacu 2026</h1>
+        <p class="subtitle">Ingresa tu Nombre y gira la ruleta mágica para obtener tu número</p>
+
+        <!-- Zona del temporizador -->
+        <div id="timerArea">
+            <div class="countdown-container" id="countdown">
+                <div class="count-box"><span class="val" id="cdDays">00</span><span class="lbl">Días</span></div>
+                <div class="count-box"><span class="val" id="cdHours">00</span><span class="lbl">Horas</span></div>
+                <div class="count-box"><span class="val" id="cdMins">00</span><span class="lbl">Min</span></div>
+                <div class="count-box"><span class="val" id="cdSecs">00</span><span class="lbl">Seg</span></div>
+            </div>
+            <div class="countdown-message" id="cdMessage">¡El sorteo se habilitará pronto!</div>
+        </div>
+    </header>
+
+    <div class="main-container">
+
+        <!-- PANEL IZQUIERDO: RULETA -->
+        <div class="left-panel">
+            <div class="controls">
+                <input type="text" id="userName" placeholder="Escribe el nombre del participante..." autocomplete="off">
+                <button class="btn-primary" id="btnGenerar" onclick="girarRuleta()">¡Girar Ruleta!</button>
+            </div>
+
+            <div class="roulette-wrapper">
+                <div class="pointer"></div>
+                <div class="roulette-container">
+                    <canvas id="wheelCanvas" width="500" height="500"></canvas>
+                </div>
+                <div class="center-circle">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polygon
+                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                        </polygon>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL DERECHO: RESULTADOS -->
+        <div class="right-panel">
+            <div class="results-container">
+                <div class="results-header">
+                    <h2>Lista de Asignados</h2>
+                    <div class="counters">
+                        <span id="countTotal">Total: 16</span>
+                        <span id="countDisp" class="disp">Libres: 8</span>
+                    </div>
+                </div>
+
+                <div class="list-grid" id="assignedList">
+                    <!-- Lista generada por JS -->
+                </div>
+
+                <div class="actions">
+                    <button class="btn-reset" onclick="reiniciarSorteo()">Reiniciar Sistema</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. DATOS, PERSISTENCIA Y TIEMPO ---
+        // Configuración de fecha límite: Domingo 15 de Marzo de 2026 a las 12:00:00 del mediodía
+        const unlockDate = new Date("2026-03-12T11:30:00");
+        let isLockedByTimer = true;
+
+        const initialSlots = [
+            { n: 1, name: "CARLOS", fixed: true }, { n: 2, name: "RICARDO", fixed: true },
+            { n: 3, name: "REYNO", fixed: true }, { n: 4, name: "CLAUDIA", fixed: true },
+            { n: 5, name: "LUISA", fixed: true }, { n: 6, name: null, fixed: false },
+            { n: 7, name: null, fixed: false }, { n: 8, name: null, fixed: false },
+            { n: 9, name: "RICARDO", fixed: true }, { n: 10, name: null, fixed: false },
+            { n: 11, name: null, fixed: false }, { n: 12, name: null, fixed: false },
+            { n: 13, name: "LUISA", fixed: true }, { n: 14, name: "CLAUDIA", fixed: true },
+            { n: 15, name: "REYNO", fixed: true }, { n: 16, name: "RICARDO", fixed: true }
+        ];
+
+        let slots = [];
+        let numDisponibles = [];
+        let currentRotation = 0; // Rotación acumulada del canvas
+
+        // Elementos DOM
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const inputName = document.getElementById('userName');
+        const btnGenerar = document.getElementById('btnGenerar');
+        const listContainer = document.getElementById('assignedList');
+
+        // Paleta de colores para la ruleta
+        const colors = [
+            '#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#10b981', '#14b8a6',
+            '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e'
+        ];
+
+        function loadData() {
+            const saved = localStorage.getItem('sorteo_ruleta_pasanacu2026');
+            if (saved) {
+                slots = JSON.parse(saved);
+            } else {
+                slots = JSON.parse(JSON.stringify(initialSlots));
+            }
+            actualizarDisponibles();
+        }
+
+        function saveData() {
+            localStorage.setItem('sorteo_ruleta_pasanacu2026', JSON.stringify(slots));
+            actualizarDisponibles();
+        }
+
+        function actualizarDisponibles() {
+            numDisponibles = slots.filter(s => !s.fixed && s.name === null).map(s => s.n);
+
+            // Actualizar contadores
+            document.getElementById('countDisp').innerText = `Libres: ${numDisponibles.length}`;
+
+            // Verificamos si estamos bloqueados por el temporizador primero
+            if (isLockedByTimer) {
+                inputName.placeholder = "Esperando la hora del sorteo...";
+                inputName.disabled = true;
+                btnGenerar.disabled = true;
+                return;
+            }
+
+            // Actualizar estado del input/boton según disponibilidad
+            if (numDisponibles.length === 0) {
+                inputName.placeholder = "¡Sorteo finalizado!";
+                inputName.disabled = true;
+                btnGenerar.disabled = true;
+            } else {
+                inputName.placeholder = "Escribe el nombre del participante...";
+                inputName.disabled = false;
+                btnGenerar.disabled = false;
+            }
+        }
+
+        // Sistema de Cuenta Regresiva
+        function updateTimer() {
+            const now = new Date();
+            const distance = unlockDate - now;
+
+            if (distance <= 0) {
+                // Ya pasó la fecha, habilitamos
+                document.getElementById('timerArea').style.display = 'none';
+                isLockedByTimer = false;
+                actualizarDisponibles();
+                return;
+            }
+
+            // Cálculos matemáticos de fechas
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            // Reflejar en la UI (con ceros a la izquierda)
+            document.getElementById('cdDays').innerText = days.toString().padStart(2, '0');
+            document.getElementById('cdHours').innerText = hours.toString().padStart(2, '0');
+            document.getElementById('cdMins').innerText = minutes.toString().padStart(2, '0');
+            document.getElementById('cdSecs').innerText = seconds.toString().padStart(2, '0');
+
+            // Revisa cada segundo
+            setTimeout(updateTimer, 1000);
+        }
+
+        // --- 2. DIBUJAR RULETA ---
+        function drawWheel() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = centerX - 10;
+
+            if (numDisponibles.length === 0) {
+                // Ruleta vacía
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = '#1e293b';
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#334155';
+                ctx.stroke();
+
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = 'bold 30px Outfit, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('FINALIZADO', centerX, centerY);
+                return;
+            }
+
+            const arcSize = (2 * Math.PI) / numDisponibles.length;
+
+            for (let i = 0; i < numDisponibles.length; i++) {
+                const angle = i * arcSize;
+                const number = numDisponibles[i];
+
+                // Color consistente basado en el número
+                const colorIndex = (number - 1) % colors.length;
+
+                ctx.beginPath();
+                // Empezamos desde -90deg (arriba)
+                ctx.arc(centerX, centerY, radius, angle - Math.PI / 2, angle + arcSize - Math.PI / 2);
+                ctx.lineTo(centerX, centerY);
+                ctx.fillStyle = colors[colorIndex];
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.stroke();
+
+                // Dibujar texto
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                // Rotar al centro del arco
+                ctx.rotate(angle + arcSize / 2 - Math.PI / 2);
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 36px Outfit, sans-serif';
+                // Sombra de texto para legibilidad
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 4;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
+                ctx.fillText(number, radius - 30, 0);
+                ctx.restore();
+            }
+        }
+
+        // --- 3. DIBUJAR LISTA DE RESULTADOS ---
+        function obtenerFechaDeCobro(numero) {
+            // El numero 1 empieza el "10 de Abril de 2026"
+            // JS usa índices 0-11 para los meses, así que Abril = 3
+            let mesInicial = 3; 
+            let añoInicial = 2026;
+            let diaFijo = 10;
+            
+            // Calculamos cuántos meses agregar respecto al número 1
+            // Ej: numero 1 suma 0 meses. Numero 2 suma 1 mes.
+            let mesesASumar = numero - 1; 
+
+            // Calculamos mes y año final
+            let mesFinal = mesInicial + mesesASumar;
+            let añosAsumar = Math.floor(mesFinal / 12);
+            mesFinal = mesFinal % 12;
+            let añoFinal = añoInicial + añosAsumar;
+
+            // Formatear: DD/MM/YYYY
+            let diaStr = diaFijo.toString().padStart(2, '0');
+            let mesStr = (mesFinal + 1).toString().padStart(2, '0'); // +1 para volver al visual 1-12
+            
+            return `${diaStr}/${mesStr}/${añoFinal}`;
+        }
+
+        function renderList(newWinnerNumber = null) {
+            listContainer.innerHTML = '';
+
+            // Ordenamos: primero poner la lista en el orden de los slots 1 al 16.
+            // O podríamos mostrar solo los asignados, pero mostrar todos visualiza mejor el "mapa".
+
+            slots.forEach(s => {
+                // Solo mostrar los que tienen nombre (fijos o sorteados)
+                if (s.name) {
+                    const div = document.createElement('div');
+                    let classes = ['list-item'];
+
+                    if (s.fixed) classes.push('fixed');
+                    else classes.push('assigned');
+
+                    if (s.n === newWinnerNumber) classes.push('new-winner');
+
+                    div.className = classes.join(' ');
+
+                    const tag = s.fixed ? 'Fijo / Previo' : 'Sorteo';
+                    const fechaCobro = obtenerFechaDeCobro(s.n); // Recibir su string de fecha exacta
+
+                    div.innerHTML = `
+                        <div class="item-number">#${s.n}</div>
+                        <div class="item-details">
+                            <div class="item-name">${s.name}</div>
+                            <div class="item-info-row">
+                                <span class="item-date">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                    ${fechaCobro}
+                                </span>
+                                <span class="item-tag">${tag}</span>
+                            </div>
+                        </div>
+                    `;
+                    listContainer.appendChild(div);
+                }
+            });
+
+            if (listContainer.children.length === 0) {
+                listContainer.innerHTML = '<div class="empty-message">Nadie ha sido sorteado aún.</div>';
+            }
+        }
+
+        // --- 4. LÓGICA DEL JUEGO ---
+        inputName.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') girarRuleta();
+        });
+
+        function girarRuleta() {
+            if (numDisponibles.length === 0) return;
+
+            const name = inputName.value.trim().toUpperCase();
+            if (!name) {
+                inputName.focus();
+                return alert("Ingresa el nombre del participante.");
+            }
+
+            // Validar que no se escriba alguien que ya fue sorteado (salvo fijos)
+            const existeSorteado = slots.some(s => s.name && s.name.toLowerCase() === name.toLowerCase() && !s.fixed);
+            if (existeSorteado) {
+                inputName.focus();
+                return alert("Esta persona ya fue sorteada previamente.");
+            }
+
+            // Iniciar giro
+            inputName.disabled = true;
+            btnGenerar.disabled = true;
+
+            // Elegir ganador en backend
+            const winnerIndex = Math.floor(Math.random() * numDisponibles.length);
+            const winnerNumber = numDisponibles[winnerIndex];
+
+            // --- Cálculos matemáticos para el giro del CSS ---
+            const arcSizeDegrees = 360 / numDisponibles.length;
+            // Dónde queremos que se detenga el canvas.
+            // Como dibujamos desde -90deg (arriba), el centro de la tajada "0" está en (arcSizeDegrees/2)
+            // Queremos que el ángulo de la tajada ganadora quede en 0deg (arriba, donde está la flecha)
+
+            // Ángulo desde el "0/top" de la ruleta original hasta el centro de la tajada del ganador
+            const targetAngle = (winnerIndex * arcSizeDegrees) + (arcSizeDegrees / 2);
+
+            // Para que parezca realista, necesitamos contrarrestar ese ángulo, más X vueltas completas extra
+            const spins = 5; // 5 vueltas
+
+            // La rotación CSS acumula total de grados
+            // Restarle targetAngle asegura que el ganador quede arriba (flecha)
+            const randomOffset = (Math.random() * (arcSizeDegrees * 0.6)) - (arcSizeDegrees * 0.3); // Pequeño descuadre para que no parezca trucado
+
+            // Nueva rotación acumulada = (vueltas enteras - lo que falta para llegar al ganador desde 0)
+            const offsetAccumulado = currentRotation % 360; // Dónde quedó la vez pasada
+            const gradosAGirar = (360 * spins) + (360 - targetAngle) - offsetAccumulado + randomOffset;
+
+            currentRotation += gradosAGirar;
+
+            // Aplicar rotación al CSS
+            canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+            // Esperar a que termine la animación (5s)
+            setTimeout(() => {
+                // Finalizado! 
+                lanzarConfeti();
+
+                // Guardar
+                const slotIndex = slots.findIndex(s => s.n === winnerNumber);
+                slots[slotIndex].name = name;
+                saveData();
+
+                // Redibujar
+                drawWheel(); // Borra a la persona de la ruleta
+
+                // Como repintamos el canvas y sacamos una porción, para el sgte giro, reseteamos la posición a 0
+                // para evitar comportamientos extraños, pero lo hacemos instantáneo quitando la transition
+                canvas.style.transition = 'none';
+                canvas.style.transform = 'rotate(0deg)';
+                currentRotation = 0;
+
+                // Forzar un "reflow" antes de devolver la transición (truco de CSS)
+                void canvas.offsetWidth;
+                canvas.style.transition = 'transform 5s cubic-bezier(0.2, 0.8, 0.1, 1)';
+
+                // Actualizar interfaz
+                renderList(winnerNumber);
+
+                inputName.value = '';
+                if (numDisponibles.length > 0) {
+                    inputName.disabled = false;
+                    btnGenerar.disabled = false;
+                    inputName.focus();
+                }
+
+            }, 5000); // 5 segundos, igual que el transition en CSS
+        }
+
+        function lanzarConfeti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#3b82f6', '#10b981', '#fbbf24']
+                });
+            }
+        }
+
+        function reiniciarSorteo() {
+            if(confirm('¿Seguro que quieres borrar la lista completamente y reiniciar?')) {
+                localStorage.removeItem('sorteo_ruleta_pasanacu2026');
+                canvas.style.transition = 'none';
+                canvas.style.transform = 'rotate(0deg)';
+                currentRotation = 0;
+                setTimeout(() => {
+                    canvas.style.transition = 'transform 5s cubic-bezier(0.2, 0.8, 0.1, 1)';
+                }, 50);
+                
+                loadData();
+                drawWheel();
+                renderList();
+            }
+        }
+
+        // --- ARRANQUE INICIAL ---
+        loadData();
+        drawWheel();
+        renderList();
+        updateTimer(); // Arrancar reloj
+
+        // Redibujar si cambian dimensiones
+        window.addEventListener('resize', () => {
+            // Un pequeño debounce para no saturar
+            clearTimeout(window.resizeTimeout);
+            window.resizeTimeout = setTimeout(drawWheel, 100);
+        });
+    </script>
+</body>
+
+</html>
